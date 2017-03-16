@@ -29,5 +29,4 @@ dependencies {
     apt project(':lib')
     testCompile 'junit:junit:4.12'
     provided project(':lib')
-    compile project(':processor')
 }
