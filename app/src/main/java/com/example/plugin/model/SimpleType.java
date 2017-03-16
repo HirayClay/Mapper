@@ -1,6 +1,7 @@
 package com.example.plugin.model;
 
 import com.example.Simple;
+import com.example.plugin.model.nestmodel.FooSon;
 
 /**
  * Created by CJJ on 2017/3/16.
@@ -11,6 +12,7 @@ public class SimpleType {
     int number;
 
     OtheSimpleType otheSimpleType;
+    FooSon fooSon;
 
     public String getName() {
         return name;
@@ -36,4 +38,11 @@ public class SimpleType {
         this.otheSimpleType = otheSimpleType;
     }
 
+    public FooSon getFooSon() {
+        return fooSon;
+    }
+
+    public void setFooSon(FooSon fooSon) {
+        this.fooSon = fooSon;
+    }
 }

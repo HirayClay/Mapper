@@ -67,20 +67,18 @@ public class TestGenerator extends AbstractProcessor {
             ParameterSpec.Builder parameter = ParameterSpec.builder(TypeName.get(typeMirror), sourceName);
             MethodSpec.Builder methodBuilder = MethodSpec.methodBuilder("map")
                     .returns(TypeName.get(typeMirror))
-                    .addStatement("$T " + copyName + " = new $T()", TypeName.get(typeMirror), TypeName.get(typeMirror))
-                    .addParameter(parameter.build())
-                    .addModifiers(Modifier.PUBLIC);
+                    .addModifiers(Modifier.PUBLIC)
+                    .addParameter(parameter.build());
+
+            methodBuilder.addStatement("$T " + copyName + " = new $T()", TypeName.get(typeMirror), TypeName.get(typeMirror));
             ExecutableElement getter = null;
             ExecutableElement setter;
             List<? extends ExecutableElement> methods = findMethods(enclosedElements, true);
-            System.out.println(methods);
             for (ExecutableElement me :
                     methods) {
-                System.out.println("returnType=========" + me.getReturnType().getKind());
                 if (me.getReturnType().getKind() != TypeKind.VOID) {
                     //getter now
                     getter = me;
-
                 } else {
                     setter = me;
                     //method-concat procedure
@@ -89,6 +87,7 @@ public class TestGenerator extends AbstractProcessor {
             }
             List<? extends ExecutableElement> noPrimitiveMethods = findNoPrimitiveMethods(enclosedElements);
             nestedCreate(sourceName, methodBuilder, noPrimitiveMethods);
+
 
             methodBuilder.addStatement("return " + copyName);
             TypeSpec typeBuilder = TypeSpec.classBuilder(ele.getSimpleName() + "Mapper")
@@ -144,34 +143,48 @@ public class TestGenerator extends AbstractProcessor {
 
     private void nestedCreate(String source, MethodSpec.Builder methodBuilder, List<? extends ExecutableElement> methodElements) {
 
-        ExecutableElement setter;
-        ExecutableElement getter;
+        ExecutableElement setter = null;
+        ExecutableElement getter = null;
         TypeMirror typeMirror = null;
-        System.out.println("---------------------" + methodElements.size());
+
         for (ExecutableElement me :
                 methodElements) {
-            if (me.asType().getKind() == TypeKind.VOID) {//setter
+            if (me.getReturnType().getKind() == TypeKind.VOID) {//setter
+                setter = me;
+                System.out.println("---------------------" + methodElements.size());
                 String copyName = createName("copy");
+                String copySourceName = createName("source");
                 TypeName typeName = TypeName.get(typeMirror);
                 methodBuilder.addStatement("$T " + copyName + " = new $T()", typeName, typeName);
-                //.....
-                DeclaredType declaredType = (DeclaredType) typeMirror;
-                Element element = declaredType.asElement();
-                List<? extends ExecutableElement> methods = findMethods(element.getEnclosedElements(), true);
+                methodBuilder.addStatement("$T " + copySourceName + " = " + source+"."+getter.getSimpleName() + "()", typeName);
+                List<? extends ExecutableElement> methods = findMethods((((DeclaredType) typeMirror).asElement()).getEnclosedElements(), true);
+                System.out.println("-----------------NESTED----" + methods);
+                glue(methodBuilder, copyName, copySourceName, methods);
+                methodBuilder.addStatement(source + "." + setter.getSimpleName() + "(" + copyName + ")");
             } else {//getter
-                typeMirror = me.asType();
+                typeMirror = me.getReturnType();
                 getter = me;
             }
+        }
+    }
 
-
-//            methodBuilder.addStatement(source + "." +)
-
+    private void glue(MethodSpec.Builder methodBuilder, String copyName, String copySourceName, List<? extends ExecutableElement> methods) {
+        ExecutableElement getter = null;
+        ExecutableElement setter;
+        for (ExecutableElement me :
+                methods) {
+            if (me.getReturnType().getKind() == TypeKind.VOID) {
+                setter = me;
+                methodBuilder.addStatement(copyName + "." + setter.getSimpleName() + "(" +copySourceName+"."+ getter.getSimpleName() + "())");
+            } else {
+                getter = me;
+            }
         }
     }
 
     private String createName(String suffix) {
-        long l = System.currentTimeMillis() % 1000;
-        return suffix + (l + "");
+        long l = System.nanoTime()%1000000;
+        return suffix + ("_"+l);
     }
 
     /**
