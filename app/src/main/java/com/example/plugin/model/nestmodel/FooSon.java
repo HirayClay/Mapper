@@ -7,6 +7,7 @@ package com.example.plugin.model.nestmodel;
 public class FooSon {
     String identy;
     int money;
+    FooSonChild fooSonChild;
 
     public String getIdenty() {
         return identy;
@@ -22,5 +23,13 @@ public class FooSon {
 
     public void setMoney(int money) {
         this.money = money;
+    }
+
+    public FooSonChild getFooSonChild() {
+        return fooSonChild;
+    }
+
+    public void setFooSonChild(FooSonChild fooSonChild) {
+        this.fooSonChild = fooSonChild;
     }
 }

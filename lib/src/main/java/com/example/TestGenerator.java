@@ -87,7 +87,7 @@ public class TestGenerator extends AbstractProcessor {
                 }
             }
             List<? extends ExecutableElement> noPrimitiveMethods = findNoPrimitiveMethods(enclosedElements);
-            nestedCreate(sourceName, methodBuilder, noPrimitiveMethods);
+            nestedCreate(copyName, methodBuilder, noPrimitiveMethods);
 
 
             methodBuilder.addStatement("return " + copyName);
@@ -161,6 +161,7 @@ public class TestGenerator extends AbstractProcessor {
                 List<? extends ExecutableElement> methods = findMethods((((DeclaredType) typeMirror).asElement()).getEnclosedElements(), true);
                 System.out.println("-----------------NESTED----" + methods);
                 glue(methodBuilder, copyName, copySourceName, methods);
+                nestedCreate(copyName,methodBuilder,findNoPrimitiveMethods((((DeclaredType) typeMirror).asElement()).getEnclosedElements()));
                 methodBuilder.addStatement(source + "." + setter.getSimpleName() + "(" + copyName + ")");
             } else {//getter
                 typeMirror = me.getReturnType();
