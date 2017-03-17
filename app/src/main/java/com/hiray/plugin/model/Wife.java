@@ -1,15 +1,12 @@
-package com.example.plugin.model;
-
-import java.util.List;
+package com.hiray.plugin.model;
 
 /**
  * Created by CJJ on 2017/3/17.
  */
 
-public class Son {
+public class Wife {
     String name;
     int age;
-    List<GirlFriend> girFriend;
 
     public String getName() {
         return name;
@@ -27,20 +24,11 @@ public class Son {
         this.age = age;
     }
 
-    public List<GirlFriend> getGirFriend() {
-        return girFriend;
-    }
-
-    public void setGirFriend(List<GirlFriend> girFriend) {
-        this.girFriend = girFriend;
-    }
-
     @Override
     public String toString() {
-        return "Son{" +
+        return "Wife{" +
                 "name='" + name + '\'' +
                 ", age=" + age +
-                ", girFriend=" + girFriend +"\n             "+
                 '}';
     }
 }

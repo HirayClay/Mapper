@@ -1,4 +1,4 @@
-package com.example.plugin;
+package com.hiray.plugin;
 
 import org.junit.Test;
 

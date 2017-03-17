@@ -1,4 +1,4 @@
-package com.example.plugin;
+package com.hiray.plugin;
 
 import android.content.Context;
 import android.support.test.InstrumentationRegistry;

@@ -1,7 +1,6 @@
-package com.example;
+package com.hiray;
 
 import com.google.auto.service.AutoService;
-import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableSet;
 import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.JavaFile;
@@ -13,6 +12,7 @@ import com.squareup.javapoet.TypeSpec;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
@@ -22,53 +22,59 @@ import javax.annotation.processing.Filer;
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.annotation.processing.Processor;
 import javax.annotation.processing.RoundEnvironment;
+import javax.inject.Singleton;
 import javax.lang.model.SourceVersion;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.Modifier;
+import javax.lang.model.element.PackageElement;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.VariableElement;
 import javax.lang.model.type.DeclaredType;
 import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
+import javax.lang.model.util.Elements;
+
+import dagger.Module;
+import dagger.Provides;
 
 /**
  * Created by CJJ on 2017/3/15.
  */
 @AutoService(Processor.class)
-public class TestGenerator extends AbstractProcessor {
+public class Compiler extends AbstractProcessor {
 
     public static final boolean DEBUG = true;
     private Filer mFiler;
     //in this situation,includes String type
-    private static final String[] PRIMITIVE_TYPES = {"int", "java.lang.String", "long", "char", "short", "byte", "boolean", "double", "float"};
+    private static final String[] BASE_TYPES = {"int", "java.lang.String", "long", "char", "short", "byte", "boolean", "double", "float"};
     private static final ClassName LIST = ClassName.get("java.util", "List");
     private static final ClassName ARRAYLIST = ClassName.get("java.util", "ArrayList");
+    private Elements elementUtils;
+    private Set<String> mapperClass = new HashSet<>();
 
     @Override
     public synchronized void init(ProcessingEnvironment processingEnv) {
         super.init(processingEnv);
         mFiler = processingEnv.getFiler();
+        elementUtils = processingEnv.getElementUtils();
     }
 
     @Override
     public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
-        Set<? extends Element> elementsAnnotatedWith = roundEnv.getElementsAnnotatedWith(Simple.class);
+        Set<? extends Element> elementsAnnotatedWith = roundEnv.getElementsAnnotatedWith(Mapper.class);
         parseElements(elementsAnnotatedWith);
-        return false;
+        return true;
     }
 
     public void parseElements(Set<? extends Element> annotationelements) {
         Iterator<? extends Element> iterator = annotationelements.iterator();
         while (iterator.hasNext()) {
             Element ele = iterator.next();
-//            Iterator<? extends Element> fieldIterator = enclosedElements.iterator();
-            //deal with Root Element(find the no-primitive) Class Element
-//            List<? extends ExecutableElement>[] array = new List[2];
             TypeMirror typeMirror = ele.asType();
             String copyName = createName("copy");
-            String sourceName = createName("source");
+            String sourceName = ele.getSimpleName().toString().toLowerCase();
             ParameterSpec.Builder parameter = ParameterSpec.builder(TypeName.get(typeMirror), sourceName);
             MethodSpec.Builder methodBuilder = MethodSpec.methodBuilder("map")
                     .returns(TypeName.get(typeMirror))
@@ -76,12 +82,32 @@ public class TestGenerator extends AbstractProcessor {
                     .addParameter(parameter.build());
             createMapper(ele, typeMirror, copyName, sourceName, methodBuilder);
             methodBuilder.addStatement("return " + copyName);
-            TypeSpec typeBuilder = TypeSpec.classBuilder(ele.getSimpleName() + "Mapper")
-                    .addMethod(methodBuilder.build())
-                    .addModifiers(Modifier.PUBLIC)
+            MethodSpec mapMethod = methodBuilder.build();
+            //if need "List<T> map(List<T> list)"
+            ParameterizedTypeName listRaw = ParameterizedTypeName.get(LIST, ClassName.get(typeMirror));
+            ParameterizedTypeName arrayListRaw = ParameterizedTypeName.get(ARRAYLIST, ClassName.get(typeMirror));
+            MethodSpec listMapMethod = MethodSpec.methodBuilder("map")
+                    .addParameter(listRaw, "sources")
+                    .addStatement("$T copies = new $T()", listRaw, arrayListRaw)
+                    .beginControlFlow("for(int i=0;i<sources.size();i++)")
+                    .addStatement("$T copy = null;", TypeName.get(typeMirror))
+                    .addStatement("$T source = sources.get(i)", TypeName.get(typeMirror))
+                    .addStatement("copy = map(source)")
+                    .addStatement("copies.add(copy)")
+                    .endControlFlow()
+                    .addStatement("return copies")
+                    .returns(listRaw)
                     .build();
 
-            JavaFile javaFile = JavaFile.builder("com.example.mapper", typeBuilder).build();
+            String clazzName = ele.getSimpleName() + "Mapper";
+            TypeSpec typeBuilder = TypeSpec.classBuilder(clazzName)
+                    .addMethod(mapMethod)
+                    .addMethod(listMapMethod)
+                    .addModifiers(Modifier.PUBLIC)
+                    .build();
+            String packageName = getPackageName(ele);
+            JavaFile javaFile = JavaFile.builder(packageName, typeBuilder).build();
+            mapperClass.add(packageName + "." + clazzName);
             try {
                 javaFile.writeTo(mFiler);
 
@@ -89,7 +115,52 @@ public class TestGenerator extends AbstractProcessor {
                 e.printStackTrace();
             }
         }
+        createMapperModule();
+    }
 
+    private void createMapperModule() {
+        Iterator<String> iterator = mapperClass.iterator();
+        List<MethodSpec> methodSpecs = new ArrayList<>();
+        while (iterator.hasNext()) {
+            String mapperClassName = iterator.next();
+            ClassName className = ClassName.bestGuess(mapperClassName);
+            int beginIndex = mapperClassName.lastIndexOf(".") > 0 ? mapperClassName.lastIndexOf(".")+1 : 0;
+            String suffix = mapperClassName.substring(beginIndex);
+            MethodSpec methodSpec = MethodSpec.methodBuilder("provide" + suffix)
+                    .addAnnotation(Provides.class)
+                    .addAnnotation(Singleton.class)
+                    .returns(className)
+                    .addModifiers(Modifier.PUBLIC)
+                    .addStatement("return new $T()", className).build();
+            methodSpecs.add(methodSpec);
+        }
+
+        TypeSpec.Builder typeSpec = TypeSpec.classBuilder("MapperModule");
+        for (int i = 0; i < methodSpecs.size(); i++) {
+            typeSpec.addMethod(methodSpecs.get(i));
+        }
+        TypeSpec spec = typeSpec.addAnnotation(Module.class)
+                .build();
+        JavaFile javaFile = JavaFile.builder("com.hiray.plugin", spec).build();
+        try {
+
+            javaFile.writeTo(mFiler);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private String getPackageName(Element ele) {
+        if (ele instanceof TypeElement) {
+            PackageElement packageElement = elementUtils.getPackageOf(ele);
+            if (!packageElement.isUnnamed()) {
+                String pkgName = packageElement.getQualifiedName().toString();
+                System.out.println(pkgName);
+                return pkgName;
+            }
+        }
+
+        return null;
     }
 
     private void createMapper(Element ele, TypeMirror typeMirror, String copyName, String sourceName, MethodSpec.Builder methodBuilder) {
@@ -136,14 +207,14 @@ public class TestGenerator extends AbstractProcessor {
                     String sourceListName = createName("sourceList");
                     String copyListName = createName("copyList");
                     String intIndex = createName("index");
-                    methodBuilder.addStatement("$T "+sourceListName+" =" + s + "." + getter.getSimpleName() + "()",listRaw)
-                            .addStatement("$T "+copyListName+" = new $T()", listRaw, arrayListRaw)
-                            .beginControlFlow("for(int "+intIndex+" = 0;"+intIndex+"< "+sourceListName+".size();"+intIndex+"++)")
-                            .addStatement("$T " + copySourceName + " = "+sourceListName+".get("+intIndex+")",rawType);
-                    createMapper(((DeclaredType)type).asElement(),type,copyName,copySourceName,methodBuilder);
-                    methodBuilder.addStatement(copyListName+".add(" + copyName + ")");
+                    methodBuilder.addStatement("$T " + sourceListName + " =" + s + "." + getter.getSimpleName() + "()", listRaw)
+                            .addStatement("$T " + copyListName + " = new $T()", listRaw, arrayListRaw)
+                            .beginControlFlow("for(int " + intIndex + " = 0;" + intIndex + "< " + sourceListName + ".size();" + intIndex + "++)")
+                            .addStatement("$T " + copySourceName + " = " + sourceListName + ".get(" + intIndex + ")", rawType);
+                    createMapper(((DeclaredType) type).asElement(), type, copyName, copySourceName, methodBuilder);
+                    methodBuilder.addStatement(copyListName + ".add(" + copyName + ")");
                     methodBuilder.endControlFlow();
-                    methodBuilder.addStatement(c + "." + setter.getSimpleName() + "("+copyListName+")");
+                    methodBuilder.addStatement(c + "." + setter.getSimpleName() + "(" + copyListName + ")");
                 } else {
                     throw new IllegalStateException("nested type parameter is not supported,like this:List<List<T>>,only 'List<T>' pattern is ok");
                 }
@@ -154,7 +225,7 @@ public class TestGenerator extends AbstractProcessor {
         }
     }
 
-    private void nestCreate(String source,String s, MethodSpec.Builder methodBuilder, List<? extends ExecutableElement> methodElements) {
+    private void nestCreate(String source, String s, MethodSpec.Builder methodBuilder, List<? extends ExecutableElement> methodElements) {
 
         ExecutableElement getter = null;
         ExecutableElement setter = null;
@@ -171,7 +242,7 @@ public class TestGenerator extends AbstractProcessor {
                 methodBuilder.addStatement("$T " + copySourceName + " = " + s + "." + getter.getSimpleName() + "()", typeName);
                 List<? extends ExecutableElement> methods = findMethods((((DeclaredType) typeMirror).asElement()).getEnclosedElements(), true);
                 glue(methodBuilder, copyName, copySourceName, methods);
-                nestCreate(copyName, s,methodBuilder, findNoPrimitiveMethods((((DeclaredType) typeMirror).asElement()).getEnclosedElements()));
+                nestCreate(copyName, s, methodBuilder, findNoPrimitiveMethods((((DeclaredType) typeMirror).asElement()).getEnclosedElements()));
                 methodBuilder.addStatement(source + "." + setter.getSimpleName() + "(" + copyName + ")");
             } else {//getter
                 typeMirror = me.getReturnType();
@@ -317,7 +388,7 @@ public class TestGenerator extends AbstractProcessor {
 
     @Override
     public Set<String> getSupportedAnnotationTypes() {
-        return ImmutableSet.of(Simple.class.getCanonicalName());
+        return ImmutableSet.of(Mapper.class.getCanonicalName());
     }
 
     @Override
@@ -326,8 +397,8 @@ public class TestGenerator extends AbstractProcessor {
     }
 
     boolean isPrimitiveType(TypeMirror typeMirror) {
-        for (int i = 0; i < PRIMITIVE_TYPES.length; i++) {
-            if (PRIMITIVE_TYPES[i].equals(typeMirror.toString()))
+        for (int i = 0; i < BASE_TYPES.length; i++) {
+            if (BASE_TYPES[i].equals(typeMirror.toString()))
                 return true;
         }
         return false;

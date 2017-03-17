@@ -1,13 +1,13 @@
-package com.example.plugin.model;
+package com.hiray.plugin.model;
 
-import com.example.Simple;
+import com.hiray.Mapper;
 
 import java.util.List;
 
 /**
  * Created by CJJ on 2017/3/17.
  */
-@Simple
+@Mapper
 public class Man {
     int age;
     List<Son> son;

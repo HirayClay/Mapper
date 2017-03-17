@@ -1,15 +1,15 @@
-package com.example;
+package com.hiray;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
-import java.security.Policy;
 
 /**
- * Created by CJJ on 2017/3/16.
+ * Created by CJJ on 2017/3/14.
  */
+@Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.TYPE)
-@Retention(RetentionPolicy.CLASS)
-public @interface Simple {
+public @interface Mapper {
+
 }

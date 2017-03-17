@@ -1,4 +1,4 @@
-package com.example.plugin.model;
+package com.hiray.plugin.model;
 
 /**
  * Created by CJJ on 2017/3/17.
