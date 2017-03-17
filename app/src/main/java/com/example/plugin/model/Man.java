@@ -9,7 +9,6 @@ import java.util.List;
  */
 @Simple
 public class Man {
-    int name;
     int age;
     List<Son> son;
     Wife wife;
@@ -36,5 +35,14 @@ public class Man {
 
     public void setWife(Wife wife) {
         this.wife = wife;
+    }
+
+    @Override
+    public String toString() {
+        return "Man{" +
+                " age=" + age +
+                ", son=" + son +"\n         "+
+                ", wife=" + wife +
+                '}';
     }
 }

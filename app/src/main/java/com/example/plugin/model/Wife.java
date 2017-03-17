@@ -5,14 +5,14 @@ package com.example.plugin.model;
  */
 
 public class Wife {
-    int name;
+    String name;
     int age;
 
-    public int getName() {
+    public String getName() {
         return name;
     }
 
-    public void setName(int name) {
+    public void setName(String name) {
         this.name = name;
     }
 
@@ -22,5 +22,13 @@ public class Wife {
 
     public void setAge(int age) {
         this.age = age;
+    }
+
+    @Override
+    public String toString() {
+        return "Wife{" +
+                "name='" + name + '\'' +
+                ", age=" + age +
+                '}';
     }
 }
