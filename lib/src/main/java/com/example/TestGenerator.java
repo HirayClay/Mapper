@@ -103,41 +103,6 @@ public class TestGenerator extends AbstractProcessor {
             } catch (IOException e) {
                 e.printStackTrace();
             }
-//            while (fieldIterator.hasNext()) {// traversal all the enclosedElements,deal the declared type ele specially;
-//                Element fieldEle = fieldIterator.next();
-//                TypeMirror typeMirror = fieldEle.asType();
-//                TypeKind kind = typeMirror.getKind();
-//                System.out.println(fieldEle);
-//                //class type field(method also return declared type,so must be  field kin|d and holding declared type is the necessary condition)
-//
-//                if (kind == TypeKind.DECLARED && fieldEle.getKind() == ElementKind.FIELD) {//处理Type类型
-//                    ParameterSpec parameterSpec = ParameterSpec.builder(TypeName.get(typeMirror), "one").build();
-//                    MethodSpec.Builder methodBuilder = MethodSpec.methodBuilder("map")
-//                            .addParameter(parameterSpec)
-//                            .addModifiers(Modifier.PUBLIC)
-//                            .returns(TypeName.get(typeMirror));
-////                    System.out.println("???????????????????" + fieldEle + "==========type:" + typeMirror + "==============" + isPrimitiveType(fieldEle.asType()));
-//                    if (isPrimitiveType(typeMirror)) {
-//                        //add primitive setter and getter;
-//
-//                    } else if (isListCollectionType(typeMirror)) {
-//                        //do nothing for now
-//
-//                    } else {//declared type
-//                        DeclaredType realType = (DeclaredType) typeMirror;
-//                        Element element = realType.asElement();
-//                        List<? extends Element> enclosedElements1 = element.getEnclosedElements();
-//                        Iterator<? extends Element> iterator1 = enclosedElements1.iterator();
-//                        while (iterator1.hasNext()) {
-//                            Element element1 = iterator1.next();
-//
-//                        }
-//                    }
-//
-//                } else {//primitive field setter and getter
-//
-//                }
-//            }
         }
 
     }
