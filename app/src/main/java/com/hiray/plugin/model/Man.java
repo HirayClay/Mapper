@@ -1,5 +1,7 @@
 package com.hiray.plugin.model;
 
+
+
 import com.hiray.Mapper;
 
 import java.util.List;

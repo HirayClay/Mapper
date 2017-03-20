@@ -41,6 +41,7 @@ import dagger.Provides;
 
 /**
  * Created by CJJ on 2017/3/15.
+ *
  */
 @AutoService(Processor.class)
 public class Compiler extends AbstractProcessor {
@@ -65,7 +66,7 @@ public class Compiler extends AbstractProcessor {
     public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
         Set<? extends Element> elementsAnnotatedWith = roundEnv.getElementsAnnotatedWith(Mapper.class);
         parseElements(elementsAnnotatedWith);
-        return true;
+        return false;
     }
 
     public void parseElements(Set<? extends Element> annotationelements) {
@@ -124,7 +125,7 @@ public class Compiler extends AbstractProcessor {
         while (iterator.hasNext()) {
             String mapperClassName = iterator.next();
             ClassName className = ClassName.bestGuess(mapperClassName);
-            int beginIndex = mapperClassName.lastIndexOf(".") > 0 ? mapperClassName.lastIndexOf(".")+1 : 0;
+            int beginIndex = mapperClassName.lastIndexOf(".") > 0 ? mapperClassName.lastIndexOf(".") + 1 : 0;
             String suffix = mapperClassName.substring(beginIndex);
             MethodSpec methodSpec = MethodSpec.methodBuilder("provide" + suffix)
                     .addAnnotation(Provides.class)
@@ -135,7 +136,7 @@ public class Compiler extends AbstractProcessor {
             methodSpecs.add(methodSpec);
         }
 
-        TypeSpec.Builder typeSpec = TypeSpec.classBuilder("MapperModule");
+        TypeSpec.Builder typeSpec = TypeSpec.classBuilder("MapperModule").addModifiers(Modifier.PUBLIC);
         for (int i = 0; i < methodSpecs.size(); i++) {
             typeSpec.addMethod(methodSpecs.get(i));
         }
@@ -147,6 +148,8 @@ public class Compiler extends AbstractProcessor {
             javaFile.writeTo(mFiler);
         } catch (IOException e) {
             e.printStackTrace();
+        }finally {
+
         }
     }
 
